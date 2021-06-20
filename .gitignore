@@ -3,3 +3,6 @@
 venv/
 ai_file/
 __pycache__/
+#file
+temp_data.txt
+temp_data2.txt
