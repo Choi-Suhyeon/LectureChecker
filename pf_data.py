@@ -6,6 +6,8 @@ Purpose: To get each subject's id (additionally make the black board logged in)
 """
 
 from selenium.common.exceptions import StaleElementReferenceException, NoSuchWindowException, NoSuchElementException
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium import webdriver
@@ -18,7 +20,7 @@ import re
 
 def get_driver():
     warnings.filterwarnings('ignore')
-    return webdriver.Chrome('./driver/chromedriver.exe')
+    return webdriver.Chrome(service=ChromeService(executable_path=ChromeDriverManager().install()))
 
 
 def scroll_2_certain_point(by: str, criterion: str, driver) -> None:
@@ -29,15 +31,16 @@ def scroll_2_certain_point(by: str, criterion: str, driver) -> None:
 
 def get_name_id_pairs(user_id: str, user_pw: str, driver) -> dict:
     bb_addr = 'https://kulms.korea.ac.kr/#'
-    entry_notice_xpath = '//*[@id="modalPush"]/div/div/div[1]/button/span[2]'
-    entry_login_xpath = '/html/body/div[2]/div/div/section/div/div/div/div[1]/div/div[2]/h3/strong/a'
+    entry_login_xpath = '/html/body/div[1]/div/div/section/div/div/div/div[1]/div/div[2]/h3/strong/a'
     login_input_id_name = 'one_id'
     login_input_pw_name = 'user_password'
     login_btn_selector = '#loginFrm > div.form-button > div:nth-child(1) > button'
-    bb_menu_bar_selector = '#main-content-inner > div > header > section > button'
+    bb_menu_bar_xpath = '//*[@id="main-content-inner"]/div/div[1]/section/button'
     bb_courses_xpath = '//*[@id="base_tools"]/bb-base-navigation-button[4]/div/li/a'
     id_name_tag = 'a'
     id_name_class = 'course-title ellipsis hide-focus-outline large-10 medium-10 small-12'
+    bb_dropdown_semester_xpath = '//*[@id="courses-overview-filter-terms"]'
+    bb_dropdown_select_current_xpath = '//*[@id="menu-"]/div[3]/ul/li[3]'
 
     def extract_id(origin: str) -> str: return origin[12:]
 
@@ -47,12 +50,10 @@ def get_name_id_pairs(user_id: str, user_pw: str, driver) -> dict:
     while True:
         try:
             driver.implicitly_wait(5)
-            driver.set_window_size(600, 800)
+            driver.set_window_size(660, 800)
             driver.get(bb_addr)
 
-            driver.find_element(By.XPATH, entry_notice_xpath).click()
             driver.find_element(By.XPATH, entry_login_xpath).click()
-
             driver.find_element(By.NAME, login_input_id_name).send_keys(user_id)
             driver.find_element(By.NAME, login_input_pw_name).send_keys(user_pw)
             driver.find_element(By.CSS_SELECTOR, login_btn_selector).send_keys(Keys.ENTER)
@@ -64,7 +65,7 @@ def get_name_id_pairs(user_id: str, user_pw: str, driver) -> dict:
 
     while True:
         try:
-            driver.find_element(By.CSS_SELECTOR, bb_menu_bar_selector).click()
+            driver.find_element(By.XPATH, bb_menu_bar_xpath).click()
             time.sleep(0.5)
 
             driver.find_element(By.XPATH, bb_courses_xpath).click()
@@ -75,8 +76,14 @@ def get_name_id_pairs(user_id: str, user_pw: str, driver) -> dict:
     time.sleep(4)
 
     while True:
+        driver.find_element(By.XPATH, bb_dropdown_semester_xpath).click()
+        driver.find_element(By.XPATH, bb_dropdown_select_current_xpath).click()
+
         scroll_2_certain_point(By.TAG_NAME, id_name_tag, driver)
+
         if raw_name_id := BeautifulSoup(driver.page_source, 'html.parser').find_all(id_name_tag, class_=id_name_class):
+            print({extract_name(i): extract_id(j) for i, j in ((k.h4.text, k['id']) for k in raw_name_id)})
+            input(' > ')
             return {extract_name(i): extract_id(j) for i, j in ((k.h4.text, k['id']) for k in raw_name_id)}
         time.sleep(3)
 

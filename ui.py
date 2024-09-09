@@ -95,11 +95,6 @@ class App(QMainWindow):
             driver = get_driver()
             self.__data = get_attendances_by_subjects(get_name_id_pairs(self.__id, self.__pw, driver), driver)
 
-            # 혹시라도 기능의 구현을 보고 싶으시거나 크롤링을 거치지 않는 빠른 실행을 원하실 경우 위 2줄을 주석처리 하시고 사용하시면 됩니다.
-            # temp_data.txt  : 크롤링을 거친 상태를 가공해 저장해 놓은 것
-            # temp_data2.txt : 테스틀를 위해 만든 임의의 데이터(위 temp_data에는 미수강 강의는 표시되지 않습니다.)
-            # with open('./temp_data.txt', 'rb') as f: self.__data = pickle.load(f)
-
             self.tabs.clear()
             self.tabs.addTab(self.tab_of_pass_rate(), '수강률')
             self.tabs.addTab(self.tab_of_untaken_lecture(), '미수강 강의')
