@@ -82,9 +82,8 @@ def get_name_id_pairs(user_id: str, user_pw: str, driver) -> dict:
         scroll_2_certain_point(By.TAG_NAME, id_name_tag, driver)
 
         if raw_name_id := BeautifulSoup(driver.page_source, 'html.parser').find_all(id_name_tag, class_=id_name_class):
-            print({extract_name(i): extract_id(j) for i, j in ((k.h4.text, k['id']) for k in raw_name_id)})
-            input(' > ')
             return {extract_name(i): extract_id(j) for i, j in ((k.h4.text, k['id']) for k in raw_name_id)}
+
         time.sleep(3)
 
 
@@ -115,7 +114,8 @@ def get_attendances_by_subjects(name_id: dict, driver) -> tuple:
         try:
             scroll_2_certain_point(By.ID, 'listContainer_showAllButton', driver)
             driver.find_element(By.ID, 'listContainer_showAllButton').click()
-        except NoSuchElementException: return pf_by_subjects_body(n_i, result)
+        except NoSuchElementException:
+            return pf_by_subjects_body(n_i, result)
 
         raw_pf_info = tuple(i.text for i in BeautifulSoup(driver.page_source, 'html.parser').select('td > span'))
         return pf_by_subjects_body(n_i, result + ((n,) + extract_title_time_pf(raw_pf_info),))

@@ -3,8 +3,6 @@ from pf_data import get_driver, get_name_id_pairs, get_attendances_by_subjects
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
 from PyQt5 import QtWidgets
-import datetime
-import pickle
 import sys
 
 
@@ -41,39 +39,53 @@ class App(QMainWindow):
     def init_ui(self):
         exit_action = QAction(QIcon('./img/quit.png'), 'Exit', self)
         exit_action.setShortcut('Ctrl+Q')
-        exit_action.setStatusTip('Exit application')
+        exit_action.setStatusTip('프로그램을 종료합니다')
         exit_action.triggered.connect(qApp.quit)
-
-        get_login_info_action = QAction(QIcon('./img/login.png'), 'Login', self)
-        get_login_info_action.setShortcut('Ctrl+L')
-        get_login_info_action.setStatusTip('Input your ID and password of the blackboard')
-        get_login_info_action.triggered.connect(self.set_login_info)
 
         update_action = QAction(QIcon('./img/update.png'), 'Update', self)
         update_action.setShortcut('Ctrl+U')
-        update_action.setStatusTip('Update course status')
+        update_action.setStatusTip('수강 내역을 갱신합니다')
         update_action.triggered.connect(self.get_data_to_update)
 
         self.statusBar()
 
-        menubar = self.menuBar()
-        menubar.setNativeMenuBar(False)
-        file_menu = menubar.addMenu('&File')
-        run_menu = menubar.addMenu('&Run')
-        file_menu.addAction(exit_action)
-        run_menu.addAction(get_login_info_action)
-        run_menu.addAction(update_action)
-
         toolbar = self.addToolBar('ToolBar')
         toolbar.addAction(exit_action)
-        toolbar.addAction(get_login_info_action)
         toolbar.addAction(update_action)
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self.tab_of_pass_rate(), '수강률')
         self.tabs.addTab(self.tab_of_untaken_lecture(), '미수강 강의')
 
-        self.setCentralWidget(self.tabs)
+        self.id_input = QLineEdit(self)
+        self.pw_input = QLineEdit(self)
+        self.submit = QPushButton('실행', self)
+        self.show_whether_submitted = QRadioButton('ID/PW 설정됨', self)
+
+        self.id_input.setStatusTip('블랙보드의 아이디를 입력합니다')
+        self.pw_input.setStatusTip('블랙보드의 비밀번호를 입력합니다')
+        self.submit.setStatusTip('아이디와 비밀번호를 이용해 수강 내역을 조회합니다')
+        self.pw_input.setEchoMode(QLineEdit.Password)
+        self.show_whether_submitted.setEnabled(False)
+        self.submit.clicked.connect(self.set_and_run)
+
+        login_box = QHBoxLayout()
+
+        login_box.addWidget(self.show_whether_submitted)
+        login_box.addWidget(QLabel('ID : '))
+        login_box.addWidget(self.id_input)
+        login_box.addWidget(QLabel('PW : '))
+        login_box.addWidget(self.pw_input)
+        login_box.addWidget(self.submit)
+
+        vbox = QVBoxLayout()
+        vbox.addLayout(login_box)
+        vbox.addWidget(self.tabs)
+
+        widget = QWidget()
+
+        widget.setLayout(vbox)
+        self.setCentralWidget(widget)
 
         self.setWindowTitle('Lecture Checker')
         self.resize(525, 400)
@@ -87,8 +99,16 @@ class App(QMainWindow):
         self.move(geometry.topLeft())
 
     def set_login_info(self):
-        dialog = InputIDPwDialog('Login Window')
-        if dialog.exec(): self.__id, self.__pw = dialog.get_inputs()
+        self.__id = self.id_input.text()
+        self.__pw = self.pw_input.text()
+
+        self.show_whether_submitted.setChecked(True)
+        self.id_input.setText(None)
+        self.pw_input.setText(None)
+
+    def set_and_run(self):
+        self.set_login_info()
+        self.get_data_to_update()
 
     def get_data_to_update(self):
         if self.__id and self.__pw:
@@ -99,14 +119,14 @@ class App(QMainWindow):
             self.tabs.addTab(self.tab_of_pass_rate(), '수강률')
             self.tabs.addTab(self.tab_of_untaken_lecture(), '미수강 강의')
         else:
-            QMessageBox.critical(self, 'Missing Information', 'The ID and password\nhave not been entered yet.')
+            QMessageBox.critical(self, '정보 누락', '아이디 또는 비밀번호가 존재하지 않습니다')
 
     def abstacted_tab(self, widget_fn):
         v_box1 = QVBoxLayout()
         v_box2 = QVBoxLayout()
 
         if not (does_exist := bool(self.__data)):
-            no_data = QLabel('The collected information does not exist.')
+            no_data = QLabel('수집된 정보가 존재하지 않습니다')
             h_box = QHBoxLayout()
             h_box.addStretch(1)
             h_box.addWidget(no_data)
@@ -114,7 +134,8 @@ class App(QMainWindow):
             v_box1.addStretch(1)
             v_box1.addLayout(h_box)
             v_box1.addStretch(1)
-        else: v_box2.addWidget(widget_fn())
+        else:
+            v_box2.addWidget(widget_fn())
 
         tab = QWidget()
         tab.setLayout(v_box2 if does_exist else v_box1)
